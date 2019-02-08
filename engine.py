@@ -22,21 +22,13 @@ def render(delay, world, actions):
   outputMap = list()
   outputMap = [". " * world.location.size + "."]
 
-
-  
-  #print(". " * world.location.size + ".")
   for i in range(world.location.size):
     outputLine = ""
     for j in range(0, world.location.size):
       outputLine = outputLine + "." + world.rep[i][j]
     outputLine = outputLine + "."
     outputMap.append(outputLine)
-    #print(outputLine)
-  #output_text.print()
-  
 
-
-  #outputMatrix = list(zip(outputMap, output_text.content))
   for i in range(len(outputMap)):
       output_index = len(output_text.content) - len(outputMap) + i
       outputEvents = ""
@@ -44,11 +36,10 @@ def render(delay, world, actions):
       if(output_index >= 0 and len(output_text.content) > output_index):
           outputEvents = output_text.content[output_index]
       print(outputMap[i] + "\t" + outputEvents)
-        #outputLine = outputLine + outputMatrix[r,c] + "\t"
-    #print(outputLine)
+
   
 
-  time.sleep(delay)
+  #time.sleep(delay)
     
 def new2DArray(size, content):
   li = list()
@@ -65,5 +56,11 @@ def proximity(a,b):
     return True
   else:
     return False
+
+def is_colliding(prop_list, x, y):
+  for i in prop_list:
+    if i.x == x and i.y == y:
+      return True
+  return False
 
 output_text = Output_Text("Begin:")

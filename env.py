@@ -11,6 +11,13 @@ class Prop:
     self.x = position[0]
     self.y = position[1]
     self.symbol = symbol
+    self.state = None
+  
+
+class Exit(Prop):
+  def __init__(self, name, position, symbol, location):
+    super().__init__(name, position, symbol)
+    self.go_to = location
 
 class Agent(Prop):
   def __init__(self, name, position, symbol):
@@ -54,20 +61,21 @@ class Agent(Prop):
     #go into pharmacy
     if action == 4:
       e.output_text.add_line(protagonist.action_labels[4][1])
+      world.change_location_of_agent(self, world.location, pharmacy, 3, 6)
       world.location = pharmacy
     
     #go into bank
     if action == 5:
-      e.output_text.add_line(protagonist.action_labels[5][1])
-      world.location = bank
+      print("not implemented")
+      #e.output_text.add_line(protagonist.action_labels[5][1])
+      #world.location = bank
     
     #go into doctor's office
     if action == 6:
-      e.output_text.add_line(protagonist.action_labels[6][1])
-      world.location = bank
+      print("not implemented")
+      #e.output_text.add_line(protagonist.action_labels[6][1])
+      #world.location = bank
   
-class Protagonist(Agent):
-
   def get_possible_actions(self):
     
     possible_actions = list()
@@ -112,10 +120,41 @@ class Protagonist(Agent):
     
     return possible_actions
 
-class Pharmacist(Agent):
-  
+  def run(self):
+    pass
+class Protagonist(Agent):
+
   def get_possible_actions(self):
-    print("not implemented")
+    
+    possible_actions = list()
+    possible_actions = possible_actions + super().get_possible_actions()
+
+    return possible_actions
+
+class Pharmacist(Agent):
+  def __init__(self, name, position, symbol):
+    super().__init__(name, position, symbol)
+
+  def get_possible_actions(self):
+    return list()
+  
+
+class Customer(Agent):
+  def __init__(self, name, position, symbol):
+    super().__init__(name, position, symbol)
+    self.move_script = [0, 3, 3, 3,]
+    self.state = "exit_pharm"
+  
+  def run(self):
+    if self.state == "exit_pharm":
+      if len(self.move_script) != 0:
+        if self.move_script[0] in self.get_possible_actions():
+          self.take_action(self.move_script[0])
+          self.move_script.pop(0)
+      else:
+          world.location.agents.remove(self)
+            
+      
 
 class Location(Prop):
   def __init__(self, name, size, position, symbol):
@@ -123,33 +162,53 @@ class Location(Prop):
     self.size = size
     self.locations = dict()
     self.inventory = list()
+    self.exits = list()
+    self.agents = list()
   def addLocation(self, location):
     self.locations.append(location)
   def get_all_props(self):
     l = list()
     for v in self.locations.values():
       l.append(v)
-    l = l + self.inventory
+    l = l + self.inventory + self.agents
     return l
 
 
 
 class World:
-  def __init__(self, location, protagonist):
+  def __init__(self, location):
     self.location = location
-    self.protagonist = protagonist
+    #self.protagonist = protagonist
     self.update()
     
+  def run_all_agents(self):
+    for i in self.location.agents:
+      i.run()
+  
   def update(self):
     self.rep = e.new2DArray(self.location.size, " ")
     #add protagonist sybol
-    self.rep[self.protagonist.y][self.protagonist.x] = self.protagonist.symbol
+    #self.rep[self.protagonist.y][self.protagonist.x] = self.protagonist.symbol
     #add location sybol
     for k, i in self.location.locations.items():
       self.rep[i.y][i.x] = i.symbol
     #add inventory symbol
     for i in self.location.inventory:
       self.rep[i.y][i.x] = i.symbol
+    #add exit symbol
+    for i in self.location.exits:
+      self.rep[i.y][i.x] = i.symbol
+    #add agents symbol
+    for i in self.location.agents:
+      self.rep[i.y][i.x] = i.symbol
+  
+  def change_location_of_agent(self, agent, old_location, new_location, x, y):
+    old_location.agents.remove(agent)
+    new_location.agents.append(agent)
+    agent.x = x
+    agent.y = y
+    
+
 
 # instantiate
 city = Location("city", 10, [0,0], 'C')
@@ -163,18 +222,28 @@ city.locations["bank"] = bank
 
 location = city
 protagonist = Protagonist("Joe", [2,2], colored('@', 'blue'))
+location.agents.append(protagonist)
+pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
+customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
 
 # pharmacy
-
+pharmacy.agents.append(pharmacist)
+pharmacy.agents.append(customer1)
 #add counter
-for i in [0, 1, 3, 4, 5, 6]:
+for i in [0, 3, 4, 5, 6]:
   newProp = Prop("counter", [i, 2], "✖")
   pharmacy.inventory.append(newProp)
+#add exit
+pharmacy.exits.append(Exit("ToCity", [3,6], colored('E', 'white'), city))
 
-world = World(location, protagonist)
+
+
+world = World(location)
 
 #simulaton loop
 while True:
+
+  world.run_all_agents()
 
   actions = protagonist.get_possible_actions()
   str_actions = list()
@@ -184,7 +253,7 @@ while True:
 
   world.update()
 
-  e.render(1, world, str_actions) 
+  e.render(1, world, str_actions)
 
 
   #input from human 

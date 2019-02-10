@@ -11,8 +11,8 @@ class Prop:
     self.x = position[0]
     self.y = position[1]
     self.symbol = symbol
-    self.state = None
-  
+    self.state = "default"
+    self.items = list()
 
 class Exit(Prop):
   def __init__(self, name, position, symbol, location):
@@ -22,16 +22,27 @@ class Exit(Prop):
 class Agent(Prop):
   def __init__(self, name, position, symbol):
     super().__init__(name, position, symbol)
-  
-  action_labels = [[0, "move left"], 
+    self.action_labels = [[0, "move left"], 
                    [1, "move right"],
                    [2, "move up"],
                    [3, "move down"],
                    [4, "go into pharmacy"],
                    [5, "go into bank"],
                    [6, "go into docter's office"],
-                  ]  
+                   [7, "browse store"],
+                   [8, "pick up weak drug"],
+                   [9, "stand in line"],
+                   [10, "wait"],
+                   [11, "order drugs"],
+                   [12, "ask for request"],
+                   [13, "ask prescription"],
+                   [14, "produce prescription"],
+                   [15, "don't produce prescription"]
+                  ] 
   
+   
+  
+
   def take_possible_action(self, action):
     possible_actions = self.get_possible_actions()
     if action in possible_actions:
@@ -60,7 +71,7 @@ class Agent(Prop):
     
     #go into pharmacy
     if action == 4:
-      e.output_text.add_line(protagonist.action_labels[4][1])
+      self.print_action(action)
       world.change_location_of_agent(self, world.location, pharmacy, 3, 6)
       world.location = pharmacy
     
@@ -75,7 +86,49 @@ class Agent(Prop):
       print("not implemented")
       #e.output_text.add_line(protagonist.action_labels[6][1])
       #world.location = bank
-  
+    
+    #browse store
+    if action == 7:
+      self.print_action(action)
+      self.state = "browse"
+
+    #take weak drug
+    if action == 8:
+      self.print_action(action)
+      self.items.append(Item("weak drug"))
+      self.state = "default"
+
+    #stand in line
+    if action == 9:
+      self.print_action(action)
+      self.state ="stand in line"
+
+    #wait
+    if action == 10:
+      self.print_action(action)
+      customer1.state = "exit pharm"
+      self.state = "at counter"
+      self.y = self.y - 1
+      pharmacist.state = "new customer"
+
+    #order drugs
+    if action == 11:
+      self.print_action(action)
+      self.state = "order drugs"
+
+    #produce prescription
+    if action == 14:
+      self.print_action(action)
+      self.state = "produce prescription"
+
+    #don't produce prescription
+    if action == 15:
+      self.print_action(action)
+      self.state = "don't produce prescription"
+    
+    
+
+
   def get_possible_actions(self):
     
     possible_actions = list()
@@ -118,8 +171,14 @@ class Agent(Prop):
       if e.proximity([self.x, self.y], [world.location.locations["doctor"].x, world.location.locations["doctor"].y]):
         possible_actions.append(6)
     
+    
+
+
     return possible_actions
 
+  def print_action(self, action):
+    e.output_text.add_line(protagonist.action_labels[action][1])
+  
   def run(self):
     pass
 class Protagonist(Agent):
@@ -127,7 +186,37 @@ class Protagonist(Agent):
   def get_possible_actions(self):
     
     possible_actions = list()
-    possible_actions = possible_actions + super().get_possible_actions()
+
+    if world.location.name == "pharmacy":
+      
+      if self.state == "default":
+        e_x = pharmacy.get_exit("city").x
+        e_y = pharmacy.get_exit("city").y
+        
+        #browse store
+        if self.y > 2 and self.y < world.location.size - 1 and ([self.x, self.y] in [[e_x-1, e_y-1],[e_x, e_y-1],[e_x+1, e_y-1]]) == False:
+          possible_actions.append(7)
+        #stand in line
+        if customer1.x == self.x and customer1.y == self.y - 1 and customer1.state == "wait":
+          possible_actions.append(9)
+
+      # pick up weak drug
+      elif self.state == "browse":
+        possible_actions.append(8)
+
+      #stand in line
+      elif self.state == "stand in line":
+        possible_actions.append(10)
+      
+     #order drugs
+      if pharmacist.state == "ask for request":
+        possible_actions.append(11)
+
+      if pharmacist.state == "need prescription":
+        possible_actions.append(14)
+        possible_actions.append(15)
+
+    possible_actions = super().get_possible_actions() + possible_actions
 
     return possible_actions
 
@@ -135,15 +224,36 @@ class Pharmacist(Agent):
   def __init__(self, name, position, symbol):
     super().__init__(name, position, symbol)
 
+  def run(self):
+
+    #response to customer at counter
+    if self.state == "new customer" and protagonist.state == "at counter":
+      self.print_action(12)
+      self.state = "ask for request"
+
+    #response to customer order drugs
+    elif self.state == "ask for request" and protagonist.state == "order drugs":
+      self.print_action(13)
+      self.state = "need prescription"
+
+  
   def get_possible_actions(self):
-    return list()
+
+    possible_actions = list()
+    if protagonist.state == "order drugs":
+      possible_actions.append(12)
+
+    if protagonist.state == "show prescription":
+      print("not implemented")
+       
+    return possible_actions
   
 
 class Customer(Agent):
   def __init__(self, name, position, symbol):
     super().__init__(name, position, symbol)
     self.move_script = [0, 3, 3, 3,]
-    self.state = "exit_pharm"
+    self.state = "default"
   
   def run(self):
     if self.state == "exit_pharm":
@@ -154,9 +264,9 @@ class Customer(Agent):
       else:
           world.location.agents.remove(self)
             
-      
 
 class Location(Prop):
+  
   def __init__(self, name, size, position, symbol):
     super().__init__(name, position, symbol)
     self.size = size
@@ -164,8 +274,17 @@ class Location(Prop):
     self.inventory = list()
     self.exits = list()
     self.agents = list()
+  
+  def get_exit(self, name):
+    for i in self.exits:
+      if i.name == name:
+        return i
+      else:
+        return None
+ 
   def addLocation(self, location):
     self.locations.append(location)
+  
   def get_all_props(self):
     l = list()
     for v in self.locations.values():
@@ -173,7 +292,9 @@ class Location(Prop):
     l = l + self.inventory + self.agents
     return l
 
-
+class Item:
+  def __init__(self, name):
+    self.name = name
 
 class World:
   def __init__(self, location):
@@ -225,6 +346,7 @@ protagonist = Protagonist("Joe", [2,2], colored('@', 'blue'))
 location.agents.append(protagonist)
 pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
 customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
+customer1.state = "wait"
 
 # pharmacy
 pharmacy.agents.append(pharmacist)
@@ -234,7 +356,7 @@ for i in [0, 3, 4, 5, 6]:
   newProp = Prop("counter", [i, 2], "✖")
   pharmacy.inventory.append(newProp)
 #add exit
-pharmacy.exits.append(Exit("ToCity", [3,6], colored('E', 'white'), city))
+pharmacy.exits.append(Exit("city", [3,6], colored('E', 'white'), city))
 
 
 

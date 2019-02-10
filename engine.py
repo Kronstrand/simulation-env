@@ -57,6 +57,9 @@ def proximity(a,b):
   else:
     return False
 
+def in(a,B):
+  for i 
+
 def is_colliding(prop_list, x, y):
   for i in prop_list:
     if i.x == x and i.y == y:

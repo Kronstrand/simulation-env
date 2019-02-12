@@ -147,7 +147,8 @@ class Agent(Prop):
     #hand over drugs
     elif action == 18:
       self.print_action(action)
-      self.items.append(Item("drugs"))
+      if self.has_item("drugs") == False:
+        self.items.append(Item("drugs"))
     #hand over receipt
     elif action == 19:
       self.print_action(action)
@@ -216,7 +217,7 @@ class Agent(Prop):
         #go into pharmacy
         if e.proximity([self.x, self.y], [world.location.locations["pharmacy"].x, world.location.locations["pharmacy"].y]):
           possible_actions.append(4)
-        
+        """
         #go into bank
         if e.proximity([self.x, self.y], [world.location.locations["bank"].x, world.location.locations["bank"].y]):
           possible_actions.append(5)
@@ -224,7 +225,7 @@ class Agent(Prop):
         #go into doctor's office
         if e.proximity([self.x, self.y], [world.location.locations["doctor"].x, world.location.locations["doctor"].y]):
           possible_actions.append(6)
-        
+        """
       if world.location.name == "pharmacy":
         ex = world.location.get_exit("city")
         if ex != None:
@@ -260,7 +261,8 @@ class Protagonist(Agent):
 
       # pick up drug
       elif self.state == "browse":
-        possible_actions.append(8)
+        if self.has_item("drugs") == False:
+          possible_actions.append(8)
 
       #wait
       elif self.state == "stand in line":
@@ -405,8 +407,8 @@ class World:
 
 
 # instantiate
-city = Location("city", 10, [0,0], 'C')
-doctors_office = Location("doctor's office", 5, [0, 3], colored('D', 'red'))
+city = Location("city", 8, [0,0], 'C')
+doctors_office = Location("doctor's office", 5, [5, 3], colored('D', 'red'))
 bank = Location("bank", 5, [3, 7], colored('$', 'red'))
 pharmacy = Location("pharmacy", 7, [1,2], colored('+', 'red'))
 

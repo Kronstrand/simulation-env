@@ -1,0 +1,24 @@
+    #order drugs
+    elif action == 11:
+      self.print_action(action)
+      self.state = "order drugs"
+
+    #response to customer at counter
+    elif action == 12:
+      self.print_action(12)
+      self.state = "ask for request" 
+
+    #ask for prescription
+    elif action == 13:
+      self.print_action(13)
+      self.state = "ask for prescription"
+
+    #produce prescription
+    elif action == 14:
+      self.print_action(action)
+      self.state = "produce prescription"
+
+    #don't produce prescription
+    elif action == 15:
+      self.print_action(action)
+      self.state = "don't produce prescription"

@@ -6,12 +6,13 @@ class Output_Text:
     #self.content = string
     self.content = list()
   def add_line(self, string):
-    #self.content = self.content + "\n" + str(string)
     self.content.append(str(string))
+  def reset(self):
+    self.content = list()
     
   def print(self):
     print(self.content)
-    
+
 def render(delay, world, actions):
   #clear_output()
   print(chr(27) + "[2J")
@@ -37,10 +38,8 @@ def render(delay, world, actions):
           outputEvents = output_text.content[output_index]
       print(outputMap[i] + "\t" + outputEvents)
 
-  
+  time.sleep(delay)
 
-  #time.sleep(delay)
-    
 def new2DArray(size, content):
   li = list()
   tempList = list()

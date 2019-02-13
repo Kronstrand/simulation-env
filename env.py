@@ -3,7 +3,8 @@ import numpy as np
 import time
 from termcolor import colored
 import sys 
-
+import random as rnd
+import rl
 
 class Prop:
   def __init__(self, name, position, symbol):
@@ -41,8 +42,8 @@ class Agent(Prop):
                    [2, "move up"],
                    [3, "move down"],
                    [4, "go into pharmacy"],
-                   [5, "go into bank"],
-                   [6, "go into docter's office"],
+                   [5, "go into bank"], #not implemented
+                   [6, "go into docter's office"], #not implemented
                    [7, "look for drugs"],
                    [8, "pick up drug"],
                    [9, "stand in line"],
@@ -63,8 +64,6 @@ class Agent(Prop):
                    [24, "skip line"]
                   ] 
   
-   
-  
 
   def take_possible_action(self, action):
     possible_actions = self.get_possible_actions()
@@ -76,6 +75,9 @@ class Agent(Prop):
   
   def take_action(self, action):
     
+    if protagonist.rewards.get(action) != None:
+      protagonist.reward = protagonist.reward + protagonist.rewards[action]
+
     #move left
     if action == 0:
       self.x = self.x - 1
@@ -122,7 +124,7 @@ class Agent(Prop):
     #take drug
     elif action == 8:
       self.print_action(action)
-      self.items.append(Item("drug"))
+      self.items.append(Item("drugs"))
       self.state = "default"
 
     #stand in line
@@ -158,12 +160,14 @@ class Agent(Prop):
     elif action == 20:
       self.print_action(action)
       pharmacist.loose_item("drugs")
+      self.items.append(Item("drugs"))
       if pharmacist.has_item("receipt") == False:
         self.state = "default"
     #take receipt
     elif action == 21:
       self.print_action(action)
       pharmacist.loose_item("receipt")
+      self.items.append(Item("receipt"))
       if pharmacist.has_item("drugs")  == False:
         self.state = "default"
     elif action == 23:
@@ -241,6 +245,97 @@ class Agent(Prop):
     pass
 class Protagonist(Agent):
 
+  def __init__(self, name, position, symbol, Q_table):
+    super().__init__(name, position, symbol)
+    self.rewards = dict()
+    self.rewards[8] = 10
+    self.rewards[20] = 10
+    self.reward = 0;
+    self.Q_table = Q_table
+    self.initial_curiosity = 0 
+    self.curiosity =  self.initial_curiosity #epsilon
+    self.learning_rate = 0.1 #alpha
+  
+  def get_Q_value(self, state, action):
+    if self.Q_table.get(state) != None:
+      if self.Q_table[state].get(action) != None:
+        return self.Q_table[state].get(action)
+    return 0.0
+
+  def add_value_to_Q_table(self, state, action, value):
+    if self.Q_table.get(state) == None:
+      self.Q_table[state] = dict()
+    self.Q_table[state][action] = value    
+  
+  def get_optimal_action(self, state):
+
+    possible_actions = self.get_possible_actions()
+    learned_actions = self.Q_table.get(state)
+    
+    if learned_actions == None:
+      return rnd.choice(possible_actions)
+    else:
+      learned_actions_num = list(learned_actions.keys())
+      Q_values = list(learned_actions.values())
+
+      #create a list of trained values that are possible
+      possible_Q_values = list()
+      possible_learned_actions_num  = list()
+      for i in range(len(learned_actions_num)):
+        if learned_actions_num[i] in possible_actions:
+          possible_learned_actions_num.append(learned_actions_num[i])
+          possible_Q_values.append(Q_values[i])
+
+
+      #add possible choices that are not trained
+      for i in range(len(possible_actions)):
+        if possible_actions[i] not in learned_actions_num:
+          possible_learned_actions_num.append(possible_actions[i])
+          possible_Q_values.append(0.0)
+
+      #choose only MAX choices
+      all_max_choices = list()
+      m = float("-inf")
+      for i in range(len(possible_Q_values)):
+        if possible_Q_values[i] > m:
+          m = possible_Q_values[i]
+          all_max_choices = list()
+          all_max_choices.append(possible_learned_actions_num[i])
+        elif possible_Q_values[i] == m:
+          all_max_choices.append(possible_learned_actions_num[i])
+
+      return rnd.choice(all_max_choices)
+
+    #return action
+  
+  def learn(self, state, action):
+    
+    new_state = self.generate_state_key()
+    Q_value = self.get_Q_value(state, action)
+    optimal_action_in_new_state = self.get_optimal_action(new_state)
+    new_optimal_Q_value = self.get_Q_value(new_state, optimal_action_in_new_state)
+
+    self.add_value_to_Q_table(state, action, rl.Q_learning_TD(Q_value, new_optimal_Q_value, self.reward))
+
+    self.reward = 0;
+  
+  def generate_state_key(self):
+    return str(world.location.name) + str(self.x) + str(self.y) + str(self.state) + str(self.has_item("drugs")) + str(pharmacist.state)
+
+  
+  def choose_action(self):
+
+    state = self.generate_state_key()
+    possible_actions = self.get_possible_actions()
+
+    if rnd.random() <= self.curiosity: # if not greedy
+      action = rnd.choice(possible_actions)
+    else:
+      action = self.get_optimal_action(state)
+
+    return action
+
+
   def get_possible_actions(self):
     
     possible_actions = list()
@@ -252,7 +347,7 @@ class Protagonist(Agent):
         e_y = pharmacy.get_exit("city").y
         
         #look for drugs
-        if self.y < 2:
+        if self.y < 2 and self.has_item("drugs") == False:
           possible_actions.append(7)
         #stand in line
         if customer1.x == self.x and customer1.y == self.y - 1 and customer1.state == "wait":
@@ -396,76 +491,100 @@ class World:
     for i in self.location.agents:
       self.rep[i.y][i.x] = i.symbol
   
-  
-
   def change_location_of_agent(self, agent, old_location, new_location, x, y):
     old_location.agents.remove(agent)
     new_location.agents.append(agent)
     agent.x = x
     agent.y = y
+
+
+
+def init(Q_table):
+
+  global city
+  global doctors_office
+  global bank
+  global protagonist
+  global pharmacy
+  global location
+  global customer1
+  global pharmacist
+  global world
+
+  e.output_text.reset()
+
+  city = Location("city", 8, [0,0], 'C')
+  doctors_office = Location("doctor's office", 5, [5, 3], colored('D', 'red'))
+  bank = Location("bank", 5, [3, 7], colored('$', 'red'))
+  pharmacy = Location("pharmacy", 7, [1,2], colored('+', 'red'))
+
+  city.locations["pharmacy"] = pharmacy
+  city.locations["doctor"] = doctors_office
+  city.locations["bank"] = bank
+
+  location = city
+  protagonist = Protagonist("Joe", [3,3], colored('@', 'blue'), Q_table)
+  protagonist.items.append(Item("prescription"))
+  location.agents.append(protagonist)
+  pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
+  customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
+  customer1.state = "wait"
+
+  # pharmacy
+  pharmacy.agents.append(pharmacist)
+  pharmacy.agents.append(customer1)
+  #add counter
+  for i in [0, 3, 4, 5, 6]:
+    newProp = Prop("counter", [i, 2], "✖")
+    pharmacy.inventory.append(newProp)
+  #add exit
+  pharmacy.exits.append(Exit("city", [3,6], colored('E', 'white'), city))
+
+  world = World(location)
+
+
+def run(Q_table, render, learn, playable):
+
+  init(Q_table)
+
+  #simulaton loop
+  for i in range(100):
+
+    actions = protagonist.get_possible_actions()
+    str_actions = list()
+    for i in range(0, len(actions)):
+        a = actions[i]
+        str_actions.append(str(protagonist.action_labels[a]))
+
+    world.update()
+
+    if render == True: 
+      e.render(1, world, str_actions)
     
+    choice = None
+    if playable == True: 
+      #input from human 
+      while True: 
+        choice = input()
+        if choice == "x":
+          sys.exit()
+        try:
+          choice = int(choice)
+          break
+        except:
+          print("input is not an int")
+    else:
+      choice = protagonist.choose_action()
 
+    state = protagonist.generate_state_key()
 
-# instantiate
-city = Location("city", 8, [0,0], 'C')
-doctors_office = Location("doctor's office", 5, [5, 3], colored('D', 'red'))
-bank = Location("bank", 5, [3, 7], colored('$', 'red'))
-pharmacy = Location("pharmacy", 7, [1,2], colored('+', 'red'))
+    protagonist.take_possible_action(choice)
+    world.run_all_agents()
 
-city.locations["pharmacy"] = pharmacy
-city.locations["doctor"] = doctors_office
-city.locations["bank"] = bank
-
-location = city
-protagonist = Protagonist("Joe", [2,2], colored('@', 'blue'))
-protagonist.items.append(Item("prescription"))
-location.agents.append(protagonist)
-pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
-customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
-customer1.state = "wait"
-
-# pharmacy
-pharmacy.agents.append(pharmacist)
-pharmacy.agents.append(customer1)
-#add counter
-for i in [0, 3, 4, 5, 6]:
-  newProp = Prop("counter", [i, 2], "✖")
-  pharmacy.inventory.append(newProp)
-#add exit
-pharmacy.exits.append(Exit("city", [3,6], colored('E', 'white'), city))
-
-
-
-world = World(location)
-
-#simulaton loop
-while True:
-
-  world.run_all_agents()
-
-  actions = protagonist.get_possible_actions()
-  str_actions = list()
-  for i in range(0, len(actions)):
-      a = actions[i]
-      str_actions.append(str(protagonist.action_labels[a]))
-
-  world.update()
-
-  e.render(1, world, str_actions)
-
-
-  #input from human 
-  while True: 
-    choice = input()
-    if choice == "x":
-      sys.exit()
-    try:
-      choice = int(choice)
-      break
-    except:
-      print("input is not an int")
-
-  protagonist.take_possible_action(choice)
+    if learn == True:
+      protagonist.learn(state, choice)
+  
+  return protagonist.Q_table
 
 
 

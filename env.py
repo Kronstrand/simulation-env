@@ -250,11 +250,11 @@ class Protagonist(Agent):
     self.rewards = dict()
     self.rewards[8] = 10
     self.rewards[20] = 10
-    self.reward = 0;
+    self.reward = 0
     self.Q_table = Q_table
-    self.initial_curiosity = 0 
-    self.curiosity =  self.initial_curiosity #epsilon
-    self.learning_rate = 0.1 #alpha
+    #self.initial_curiosity = 0 
+    #self.curiosity =  self.initial_curiosity #epsilon
+    #self.learning_rate = 0.1 #alpha
   
   def get_Q_value(self, state, action):
     if self.Q_table.get(state) != None:

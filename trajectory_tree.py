@@ -1,9 +1,11 @@
+import copy
 import plot_graph as p
+
+
 
 class Tree():
     def __init__(self):
         self.tree = list()
-        self.unfinished_branches = list()
 
     def to_string(self):
         self.tree[0].print_node("", True)
@@ -17,9 +19,10 @@ class Tree():
     
     def generate_tree_from_plot_graph(self, plot_graph, start_point):
         
+        self.add_new_node(Tree_Node(start_point.label))
 
-        self.tree = Tree_Node(start_point.label)
-        unfinished_branches.append([self.tree, plot_graph])
+        unfinished_branches = list()
+        unfinished_branches.append([self.tree[0], plot_graph.update_plot_graph(start_point)])
         
         #for all paths
         #get get_executable_events()
@@ -28,16 +31,19 @@ class Tree():
                 #update graph
                 # associate graph with new node
 
-        while True:
+        while len(unfinished_branches) > 0:
             new_unfinished_branches = list()
             for unfinsihed_branch_node in unfinished_branches:
-                executable_events = unfinsihed_branch_node[1].get_executable_events()
+                cloned_plotgraph = copy.deepcopy(unfinsihed_branch_node[1])
+                executable_events = cloned_plotgraph.get_executable_events()
 
                 for executable_event in executable_events:
                     new_node = Tree_Node(executable_event.label)
                     unfinsihed_branch_node[0].add_new_child(new_node)
-                    new_unfinished_branches.append([new_node, unfinsihed_branch_node[1].update_plot_graph(executable_event)]) #implement update_plot_graph
-
+                    new_updated_plot_graph = cloned_plotgraph.update_plot_graph(executable_event)
+                    new_unfinished_branches.append([new_node, new_updated_plot_graph])
+            
+            unfinished_branches = new_unfinished_branches
     
     
 class Tree_Node:

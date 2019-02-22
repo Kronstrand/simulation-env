@@ -41,7 +41,7 @@ plot_graph.get_event("Pharmacist refuses to sell").is_before(plot_graph.get_even
 plot_graph.create_mutual_exclusivity(plot_graph.get_event("Customer produces prescription"), plot_graph.get_event("Customer cannot produce prescription"))
 plot_graph.create_mutual_exclusivity(plot_graph.get_event("Customer pays cash"), plot_graph.get_event("Customer swipes card"))
 
-#pharm_tree = tt.Tree()
+pharm_tree = tt.Tree()
 #pharm_tree.generate_tree_from_plot_graph(plot_graph, plot_graph.get_event("Stand in line"))
 #pharm_tree.to_string()
 
@@ -66,8 +66,44 @@ pg2.add_new_event("katten falder")
 pg2.get_event("katten løber").is_before(pg2.get_event("katten falder"))
 
 test_tree = tt.Tree()
-test_tree.generate_tree_from_plot_graph(pg2, pg2.get_event("katten løber"))
-test_tree.to_string()
+#test_tree.generate_tree_from_plot_graph(pg2, pg2.get_event("katten løber"))
+#test_tree.to_string()
+
+
+#add events
+bank_plot = p.Plot_Graph()
+bank_plot.add_new_event("Sally puts money in bag")
+bank_plot.add_new_event("Sally gives John bag")
+bank_plot.add_new_event("Sally presses alarm")
+bank_plot.add_new_event("John takes bag")
+bank_plot.add_new_event("John leaves bank")
+bank_plot.add_new_event("Polices arives")
+bank_plot.add_new_event("Sally calls police")
+bank_plot.add_new_event("Police arrests John")
+
+# add before constraints
+bank_plot.get_event("Sally puts money in bag").is_before(bank_plot.get_event("Sally gives John bag"))
+bank_plot.get_event("Sally puts money in bag").is_before(bank_plot.get_event("Sally presses alarm"))
+bank_plot.get_event("Sally gives John bag").is_before(bank_plot.get_event("John takes bag"))
+bank_plot.get_event("Sally presses alarm").is_before(bank_plot.get_event("John takes bag"))
+bank_plot.get_event("John takes bag").is_before(bank_plot.get_event("John leaves bank"))
+bank_plot.get_event("John leaves bank").is_before(bank_plot.get_event("Polices arives"))
+bank_plot.get_event("John leaves bank").is_before(bank_plot.get_event("Sally calls police"))
+bank_plot.get_event("Sally calls police").is_before(bank_plot.get_event("Police arrests John"))
+bank_plot.get_event("Polices arives").is_before(bank_plot.get_event("Police arrests John"))
+
+# add mutual exclution
+bank_plot.create_mutual_exclusivity(bank_plot.get_event("Sally presses alarm"), bank_plot.get_event("Sally calls police"))
+bank_plot.get_event("Sally presses alarm").set_type("optional")
+bank_plot.get_event("Sally calls police").set_type("conditional")
+bank_plot.create_mutual_exclusivity(bank_plot.get_event("John leaves bank"), bank_plot.get_event("Polices arives"))
+bank_plot.get_event("John leaves bank").set_type("optional")
+bank_plot.get_event("Polices arives").set_type("conditional")
+
+#generate bank tree
+bank_tree = tt.Tree()
+bank_tree.generate_tree_from_plot_graph(bank_plot, bank_plot.get_event("Sally puts money in bag"))
+bank_tree.to_string()
 
 
 

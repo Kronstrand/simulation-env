@@ -1,3 +1,5 @@
+import copy
+
 class Plot_Graph():
     def __init__(self):
         self.id_iterator = 0
@@ -25,25 +27,62 @@ class Plot_Graph():
 
         #remove before relations
         for before_event in event.before:
-            if event in before_event.after:
-                before_event.after.remove(event)
+            for after_event in before_event.after:
+                if after_event.id == event.id:
+                    before_event.after.remove(after_event)
+
         #remove after relations
         for after_event in event.after:
-            if event in after_event.before:
-                after_event.before.remove(event)
+            for before_event in after_event.before:
+                if before_event.id == event.id:
+                    after_event.before.remove(before_event)
+
         #remove mutial exclution relations
         for mutual_exclusive_event in event.mutual_exclusive_with:
-            if event in mutual_exclusive_event.mutual_exclusive_with:
-                mutual_exclusive_event.mutual_exclusive_with.remove(event)
-        #remove event itself
-        self.content.remove(event)
+            for me_event_in_me_event in mutual_exclusive_event.mutual_exclusive_with:
+                if me_event_in_me_event.id == event.id:
+                    mutual_exclusive_event.mutual_exclusive_with.remove(me_event_in_me_event)
+        
+        #remove the event itself
+        for i in self.content:
+            if i.id == event.id:
+                self.content.remove(i)
 
+    def prepare(self):
+
+        #create links between proceeding and preceeding events of optional events
+        for event in self.content:
+            if event.type == "optional":
+                for before_event in event.before:
+                    for after_event in event.after:
+                        before_event.is_before(after_event)
+                        print(before_event.label + " is before " + after_event.label)
+    
     def get_executable_events(self):
         executable_events = list()
+
+        
         for i in self.content:
-            if len(i.before) == 0:
+
+            optional_event_counter = 0
+            for before_event in i.before:
+                if before_event.type == "optional":
+                    optional_event_counter = optional_event_counter + 1
+            
+            if len(i.before) - optional_event_counter == 0:
                 executable_events.append(i)
+
         return executable_events
+    
+    def new_updated_plot_graph(self, event):
+
+        cloned_plot_Graph = copy.deepcopy(self)
+        cloned_event = None
+        for i in range(len(cloned_plot_Graph.content)):
+            if cloned_plot_Graph.content[i].id == event.id:
+                cloned_event = cloned_plot_Graph.content[i]
+
+        return cloned_plot_Graph.update_plot_graph(cloned_event)
     
     def update_plot_graph(self, event):
         
@@ -56,7 +95,6 @@ class Plot_Graph():
         for before_event in event.before:
             self.remove_event(before_event)
         
-        #remove the event itself
         self.remove_event(event)
         
         return self
@@ -66,26 +104,33 @@ class Plot_Graph():
 
         def recursivly_remove_mutual_exclution_events(event, proceeding_events_of_deleted_events):
 
-            for proceeding_event in event.after:
+            proceeding_events = copy.copy(event.after)
+            self.remove_event(event)
+
+            for proceeding_event in proceeding_events:
                 # if there is just one preceedence constraint
-                if len(proceeding_event.before) == 1:
+                if len(proceeding_event.before) == 0:
                     recursivly_remove_mutual_exclution_events(proceeding_event, proceeding_events_of_deleted_events)
                     
-                    #remove deleted event from the list of proceeding_events of deleted_events
+                    #remove deleted event from the list of proceeding_events that was not deleted
                     if proceeding_event in proceeding_events_of_deleted_events:
                         proceeding_events_of_deleted_events.remove(proceeding_event)
 
-                    #remove the proceeding event itself from the plot graph
-                    self.remove_event(proceeding_event)
                 else:
-                    #add proceeding_event to list of proceeding_events_of_deleted_events
+                    #add proceeding_event to list of proceeding_events that was not deleted
                     if proceeding_event not in proceeding_events_of_deleted_events:
                         proceeding_events_of_deleted_events.append(proceeding_event)
-                #remove event istelf
             
+            return proceeding_events_of_deleted_events
+                    
 
         proceeding_events_of_deleted_events = list()
         proceeding_events_of_deleted_events = recursivly_remove_mutual_exclution_events(event, proceeding_events_of_deleted_events)
+
+        #keep structural information by linking preceeding events of the deleted events to the proceeding event of first deleted event
+        for before_deleted_event in event.before:
+            for after_deleted_event in proceeding_events_of_deleted_events:
+                before_deleted_event.is_before(after_deleted_event)
 
 
 class Event():
@@ -102,11 +147,10 @@ class Event():
         self.mutual_exclusive_with.append(event)
     def is_before(self, event):
         self.after.append(event)
-        #event.available = False
         event.before.append(self)
     def set_type(self, event_type):
-        if event_type != "normal" or event_type != "optional" or event_type != "conditional":
-            raise ValueError(str(event_type) + 'not allowed as type')
+        if event_type == "normal" or event_type == "optional" or event_type == "conditional":
+            self.type = event_type      
         else:
-            self.type = event_type
+            raise ValueError(str(event_type) + ' not allowed as type')
 

@@ -5,6 +5,7 @@ import plot_graph as p
 
 class Tree():
     def __init__(self):
+        self.n_stories = 0
         self.tree = list()
 
     def to_string(self):
@@ -22,6 +23,7 @@ class Tree():
         plot_graph.prepare()
         
         self.add_new_node(Tree_Node(start_point.label))
+        #plot_graph.executable_events.append([start_point])
 
         unfinished_branches = list() #[tree node, plot graph]
         unfinished_branches.append([self.tree[0], plot_graph.update_plot_graph(start_point)])
@@ -31,6 +33,9 @@ class Tree():
             for unfinished_branch_node in unfinished_branches:
                 plot_graph = unfinished_branch_node[1]
                 executable_events = plot_graph.get_executable_events()
+                #executable_events = plot_graph.executable_events[-1]
+                if len(executable_events) == 0:
+                    self.n_stories = self.n_stories + 1
 
                 for executable_event in executable_events:
                     new_node = Tree_Node(executable_event.label)
@@ -39,6 +44,8 @@ class Tree():
                     new_unfinished_branches.append([new_node, new_updated_plot_graph])
             
             unfinished_branches = new_unfinished_branches
+            
+        print("Number og stories: " + str(self.n_stories))
     
     
 class Tree_Node:

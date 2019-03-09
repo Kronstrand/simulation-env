@@ -4,6 +4,7 @@ class Plot_Graph():
     def __init__(self):
         self.id_iterator = 0
         self.content = list()
+        self.executable_events = list()
 
     def create_mutual_exclusivity(self, event1, event2):
         event1.add_mutual_exclusivity(event2)
@@ -56,14 +57,12 @@ class Plot_Graph():
                 for before_event in event.before:
                     for after_event in event.after:
                         before_event.is_before(after_event)
-                        print(before_event.label + " is before " + after_event.label)
+                        #print(before_event.label + " is before " + after_event.label)
     
     def get_executable_events(self):
         executable_events = list()
 
-        
         for i in self.content:
-
             optional_event_counter = 0
             for before_event in i.before:
                 if before_event.type == "optional":
@@ -73,6 +72,27 @@ class Plot_Graph():
                 executable_events.append(i)
 
         return executable_events
+    
+    def remove_executable_event(self, event):
+        
+        self.executable_events[-1].remove(event)
+        if len(self.executable_events[-1]) == 0:
+            del self.executable_events[-1]
+    
+    def set_executable_events(self, event):
+        
+        new_executable_events = list()
+        for after_event in event.after:
+            optional_event_counter = 0
+            for before_event in after_event.before:
+                if before_event.type == "optional":
+                    optional_event_counter = optional_event_counter + 1
+            
+            if len(after_event.before) - optional_event_counter == 1:
+                new_executable_events.append(after_event)
+        
+        if len(new_executable_events) > 0:
+            self.executable_events.append(new_executable_events)
     
     def new_updated_plot_graph(self, event):
 
@@ -87,14 +107,19 @@ class Plot_Graph():
     def update_plot_graph(self, event):
         
         #remove mutual exclusive events because its mutual exclusive counterpart was used
-        #propagate: remove all event following dependent on the mutual exclusive removed event
-        for mutual_exclusive_event in event.mutual_exclusive_with:
+        #propagate: remove all events dependent on the mutual exclusive removed event
+        for mutual_exclusive_event in copy.copy(event.mutual_exclusive_with):
             self.remove_mutual_exclution_with_propagation(mutual_exclusive_event)
 
-        #remove before relations dependet on removed events.
-        for before_event in event.before:
+        #remove previous events that are no more available
+        for before_event in copy.copy(event.before):
             self.remove_event(before_event)
         
+        
+        #update executable events    
+        #self.remove_executable_event(event)
+        #self.set_executable_events(event)
+
         self.remove_event(event)
         
         return self
@@ -104,7 +129,12 @@ class Plot_Graph():
 
         def recursivly_remove_mutual_exclution_events(event, proceeding_events_of_deleted_events):
 
+            for before_event in event.before:
+                for after_event in event.after:
+                    before_event.is_before(after_event)
+            
             proceeding_events = copy.copy(event.after)
+            #print(event.label + " is removed recursivly")
             self.remove_event(event)
 
             for proceeding_event in proceeding_events:

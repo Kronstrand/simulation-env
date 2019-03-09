@@ -248,13 +248,23 @@ class Protagonist(Agent):
   def __init__(self, name, position, symbol, Q_table):
     super().__init__(name, position, symbol)
     self.rewards = dict()
-    self.rewards[8] = 10
-    self.rewards[20] = 10
+    self.set_rewards("get drugs")
     self.reward = 0
     self.Q_table = Q_table
     #self.initial_curiosity = 0 
     #self.curiosity =  self.initial_curiosity #epsilon
     #self.learning_rate = 0.1 #alpha
+  
+  def set_rewards(reward_structure):
+    
+    if reward_structure == "get drugs":
+      self.rewards[8] = 10
+      self.rewards[20] = 10
+    elif reward_structure == "use tree":
+      pass
+    
+
+
   
   def get_Q_value(self, state, action):
     if self.Q_table.get(state) != None:

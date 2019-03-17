@@ -1,4 +1,6 @@
-import copy
+import nlp
+
+import copy # for copying objects
 
 class Plot_Graph():
     def __init__(self):
@@ -23,6 +25,19 @@ class Plot_Graph():
         for i in self.content:
             if i.label == label:
                 return i
+    
+    def connect_predecessors_to_successors(self, events):
+        for event in events:
+            for before_event in event.before:
+                for after_event in event.after:
+                    before_event.is_before(after_event)
+    
+    def remove_events(self, events):
+
+        if len(events) > 0:
+            for event in events:
+                if event in self.content:
+                    self.remove_event(event)
     
     def remove_event(self, event):
 
@@ -49,17 +64,24 @@ class Plot_Graph():
             if i.id == event.id:
                 self.content.remove(i)
 
+    def remove_event_only(self, event):
+        for pre_event in event.before:
+            for suc_event in event.after:
+                pre_event.is_before(suc_event)
+        self.remove_event(event)
+
+    
     def prepare(self):
 
         #create links between proceeding and preceeding events of optional events
         for event in self.content:
-            if event.type == "optional":
-                for before_event in event.before:
-                    for after_event in event.after:
-                        before_event.is_before(after_event)
-                        #print(before_event.label + " is before " + after_event.label)
+          if event.type == "optional":
+            for before_event in event.before:
+              for after_event in event.after:
+                before_event.is_before(after_event)
     
     def get_executable_events(self):
+        
         executable_events = list()
 
         for i in self.content:
@@ -78,7 +100,7 @@ class Plot_Graph():
         self.executable_events[-1].remove(event)
         if len(self.executable_events[-1]) == 0:
             del self.executable_events[-1]
-    
+    """    
     def set_executable_events(self, event):
         
         new_executable_events = list()
@@ -93,7 +115,7 @@ class Plot_Graph():
         
         if len(new_executable_events) > 0:
             self.executable_events.append(new_executable_events)
-    
+    """    
     def new_updated_plot_graph(self, event):
 
         cloned_plot_Graph = copy.deepcopy(self)
@@ -101,31 +123,54 @@ class Plot_Graph():
         for i in range(len(cloned_plot_Graph.content)):
             if cloned_plot_Graph.content[i].id == event.id:
                 cloned_event = cloned_plot_Graph.content[i]
+                break
 
         return cloned_plot_Graph.update_plot_graph(cloned_event)
     
     def update_plot_graph(self, event):
         
+        excluded_events = list()
+        for mutual_exclusive_event in event.mutual_exclusive_with:
+            excluded_events = excluded_events + self.remove_mutual_exclution_with_propagation(mutual_exclusive_event, list())
+            
+        expired_events = [event] + event.before
+        self.connect_predecessors_to_successors(excluded_events)
+        self.remove_events(excluded_events + expired_events)
+
+        return self
+
+
+    def update_plot_graph2(self, event):
+        
         #remove mutual exclusive events because its mutual exclusive counterpart was used
         #propagate: remove all events dependent on the mutual exclusive removed event
         for mutual_exclusive_event in copy.copy(event.mutual_exclusive_with):
-            self.remove_mutual_exclution_with_propagation(mutual_exclusive_event)
+            self.remove_mutual_exclution_with_propagation2(mutual_exclusive_event)
 
         #remove previous events that are no more available
         for before_event in copy.copy(event.before):
             self.remove_event(before_event)
-        
-        
-        #update executable events    
-        #self.remove_executable_event(event)
-        #self.set_executable_events(event)
 
         self.remove_event(event)
         
         return self
 
     
-    def remove_mutual_exclution_with_propagation(self, event):
+    def remove_mutual_exclution_with_propagation(self, event, excluded_events):
+
+        excluded_events.append(event)
+        
+        for proceeding_event in event.after:
+            n_excluded = 0
+            for preceeding_event in proceeding_event.before:
+                if preceeding_event in excluded_events:
+                    n_excluded = n_excluded + 1
+            if len(proceeding_event.before) - n_excluded == 0:
+                self.remove_mutual_exclution_with_propagation(proceeding_event, excluded_events)
+                
+        return excluded_events
+
+    def remove_mutual_exclution_with_propagation2(self, event):
 
         def recursivly_remove_mutual_exclution_events(event, proceeding_events_of_deleted_events):
 
@@ -162,24 +207,47 @@ class Plot_Graph():
             for after_deleted_event in proceeding_events_of_deleted_events:
                 before_deleted_event.is_before(after_deleted_event)
 
+    def trim_to_fit_labels(self, labels, threshold):
+        
+        word2vec = nlp.Word2vec()
+
+        excluded_events = list()
+        for event in self.content:
+            for label in labels:
+                label_text = label[1]
+                similarity = word2vec.compare_sentences(event.label, label_text)
+                if similarity > threshold:
+                    event.action_corr = label[0] #int
+            # if no corrosponding action was founds
+            if event.action_corr == None :
+                print(event.label + " was removed with " + str(similarity))   
+                excluded_events.append(event)
+
+        self.connect_predecessors_to_successors(excluded_events)
+        self.remove_events(excluded_events)
+
+        return self
+        
 
 class Event():
     def __init__(self, id, label):
         #self.events
         self.id = id
-        self.label = label 
-        self.available = True
+        self.label = label
+        self.action_corr = None
         self.before = list() # these events are positioned before the event
         self.after = list() # these events are positioned after the event
         self.mutual_exclusive_with = list()
-        self.type = "normal" #normal, optinoal, conditional
+        self.type = "normal" #normal, optinoal
     def add_mutual_exclusivity(self, event):
         self.mutual_exclusive_with.append(event)
     def is_before(self, event):
-        self.after.append(event)
-        event.before.append(self)
+        #if the constraint is not already created
+        if event not in self.after:
+            self.after.append(event)
+            event.before.append(self)
     def set_type(self, event_type):
-        if event_type == "normal" or event_type == "optional" or event_type == "conditional":
+        if event_type == "normal" or event_type == "optional":
             self.type = event_type      
         else:
             raise ValueError(str(event_type) + ' not allowed as type')

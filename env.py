@@ -78,6 +78,8 @@ class Agent(Prop):
     if protagonist.rewards.get(action) != None:
       protagonist.reward = protagonist.reward + protagonist.rewards[action]
 
+    # if action == current tree node.next
+
     #move left
     if action == 0:
       self.x = self.x - 1

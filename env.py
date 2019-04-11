@@ -5,39 +5,9 @@ from termcolor import colored
 import sys 
 import random as rnd
 import rl
+import trajectory_tree as tt
 
-class Prop:
-  def __init__(self, name, position, symbol):
-    self.name = name
-    self.x = position[0]
-    self.y = position[1]
-    self.symbol = symbol
-    self.state = "default"
-    self.items = list()
-
-  def has_item(self, name):
-    for i in self.items:
-      if i.name == name:
-        return True  
-    return False
-
-  def loose_item(self, name):
-    for i in range(len(self.items)):
-      if self.items[i].name == name:
-        self.items.pop(i)
-        break
-      
-
-class Exit(Prop):
-  def __init__(self, name, position, symbol, location):
-    super().__init__(name, position, symbol)
-    self.go_to = location
-
-class Agent(Prop):
-  def __init__(self, name, position, symbol):
-    super().__init__(name, position, symbol)
-    self.walkable = True
-    self.action_labels = [[0, "move left"], 
+action_labels = [[0, "move left"], 
                    [1, "move right"],
                    [2, "move up"],
                    [3, "move down"],
@@ -63,6 +33,38 @@ class Agent(Prop):
                    [23, "leave pharmacy"],
                    [24, "skip line"]
                   ] 
+
+class Prop:
+  def __init__(self, name, position, symbol):
+    self.name = name
+    self.x = position[0]
+    self.y = position[1]
+    self.symbol = symbol
+    self.state = "default"
+    self.items = list()
+
+  def has_item(self, name):
+    for i in self.items:
+      if i.name == name:
+        return True  
+    return False
+
+  def loose_item(self, name):
+    for i in range(len(self.items)):
+      if self.items[i].name == name:
+        self.items.pop(i)
+        break
+
+class Exit(Prop):
+  def __init__(self, name, position, symbol, location):
+    super().__init__(name, position, symbol)
+    self.go_to = location
+
+class Agent(Prop):
+  def __init__(self, name, position, symbol):
+    super().__init__(name, position, symbol)
+    self.walkable = True
+    self.action_labels = action_labels
   
 
   def take_possible_action(self, action):
@@ -71,14 +73,23 @@ class Agent(Prop):
       self.take_action(action)
     else:
       e.output_text.add_line("Error: non available action")
+
+  def reward_protagonist(self, action):
     
+    if protagonist.trajectory_tree == None:
+      if protagonist.rewards.get(action) != None:
+        protagonist.reward = protagonist.reward + protagonist.rewards[action]
+    elif len(protagonist.current_tree_event.children) > 0:
+      for event in protagonist.current_tree_event.children:
+        if event.action_correspondence == action:
+          protagonist.reward = protagonist.reward + 10
+          protagonist.current_tree_event = event
+          break
+          
   
   def take_action(self, action):
     
-    if protagonist.rewards.get(action) != None:
-      protagonist.reward = protagonist.reward + protagonist.rewards[action]
-
-    # if action == current tree node.next
+    self.reward_protagonist(action)
 
     #move left
     if action == 0:
@@ -250,22 +261,25 @@ class Protagonist(Agent):
   def __init__(self, name, position, symbol, Q_table):
     super().__init__(name, position, symbol)
     self.rewards = dict()
-    self.set_rewards("get drugs")
     self.reward = 0
     self.Q_table = Q_table
-    #self.initial_curiosity = 0 
-    #self.curiosity =  self.initial_curiosity #epsilon
+    self.initial_curiosity = 0 
+    self.curiosity =  self.initial_curiosity #epsilon
+    self.trajectory_tree = None
+    self.current_tree_event = None
     #self.learning_rate = 0.1 #alpha
+   
   
-  def set_rewards(reward_structure):
+  def set_rewards(self, reward_structure):
     
     if reward_structure == "get drugs":
       self.rewards[8] = 10
       self.rewards[20] = 10
-    elif reward_structure == "use tree":
-      pass
-    
+  
+  def take_action(self, action):
 
+    return super().take_action(action)
+    
 
   
   def get_Q_value(self, state, action):
@@ -339,7 +353,6 @@ class Protagonist(Agent):
 
     state = self.generate_state_key()
     possible_actions = self.get_possible_actions()
-
     if rnd.random() <= self.curiosity: # if not greedy
       action = rnd.choice(possible_actions)
     else:
@@ -511,7 +524,7 @@ class World:
 
 
 
-def init(Q_table):
+def init(Q_table, tree):
 
   global city
   global doctors_office
@@ -534,14 +547,18 @@ def init(Q_table):
   city.locations["doctor"] = doctors_office
   city.locations["bank"] = bank
 
-  location = city
-  protagonist = Protagonist("Joe", [3,3], colored('@', 'blue'), Q_table)
+  #location = city
+  location = pharmacy
+
+  protagonist = Protagonist("Joe", [4,4], colored('@', 'blue'), Q_table)
   protagonist.items.append(Item("prescription"))
+  protagonist.trajectory_tree = tree
+  protagonist.current_tree_event = tree.tree[0]
   location.agents.append(protagonist)
+
   pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
   customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
   customer1.state = "wait"
-
   # pharmacy
   pharmacy.agents.append(pharmacist)
   pharmacy.agents.append(customer1)
@@ -554,10 +571,9 @@ def init(Q_table):
 
   world = World(location)
 
+def run(Q_table, tree, render, learn, playable):
 
-def run(Q_table, render, learn, playable):
-
-  init(Q_table)
+  init(Q_table, tree)
 
   #simulaton loop
   for i in range(100):

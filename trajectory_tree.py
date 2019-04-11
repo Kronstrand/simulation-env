@@ -21,28 +21,26 @@ class Tree():
         
         plot_graph.prepare()
         
-        self.add_new_node(Tree_Node(start_point.label))
+        #self.add_new_node(Tree_Node(start_point.label))
+        self.add_new_node(Tree_Node("Root"))
 
         unfinished_branches = list() #[tree node, plot graph]
-        unfinished_branches.append([self.tree[0], plot_graph.update_plot_graph(start_point)])
+        unfinished_branches.append([self.tree[0], plot_graph])
 
         while len(unfinished_branches) > 0:
             new_unfinished_branches = list()
             for unfinished_branch_node in unfinished_branches:
                 plot_graph = unfinished_branch_node[1]
                 executable_events = plot_graph.get_executable_events()
-                if len(executable_events) == 0:
-                    self.n_stories = self.n_stories + 1
 
                 for executable_event in executable_events:
                     new_node = Tree_Node(executable_event.label)
                     unfinished_branch_node[0].add_new_child(new_node)
-                    new_updated_plot_graph = plot_graph.new_updated_plot_graph(executable_event)
-                    new_unfinished_branches.append([new_node, new_updated_plot_graph])
+                    if len(executable_event.after) != 0: # if node is an end node
+                        new_updated_plot_graph = plot_graph.new_updated_plot_graph(executable_event)
+                        new_unfinished_branches.append([new_node, new_updated_plot_graph])
             
             unfinished_branches = new_unfinished_branches
-            
-        print("Number og stories: " + str(self.n_stories))
 
     def generate_tree_from_plot_graph2(self, plot_graph, start_point):
         
@@ -59,19 +57,15 @@ class Tree():
             for unfinished_branch_node in unfinished_branches:
                 plot_graph = unfinished_branch_node[1]
                 executable_events = plot_graph.get_executable_events()
-                #executable_events = plot_graph.executable_events[-1]
-                if len(executable_events) == 0:
-                    self.n_stories = self.n_stories + 1
 
                 for executable_event in executable_events:
                     new_node = Tree_Node(executable_event.label)
                     unfinished_branch_node[0].add_new_child(new_node)
-                    new_updated_plot_graph = plot_graph.new_updated_plot_graph(executable_event)
-                    new_unfinished_branches.append([new_node, new_updated_plot_graph])
+                    if len(executable_event.after) != 0: # if node is an end node
+                        new_updated_plot_graph = plot_graph.new_updated_plot_graph(executable_event)
+                        new_unfinished_branches.append([new_node, new_updated_plot_graph])
             
             unfinished_branches = new_unfinished_branches
-            
-        print("Number og stories: " + str(self.n_stories))
 
 
 

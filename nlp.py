@@ -26,6 +26,7 @@ class Word2vec():
                 word_vec1 = self.model[token]
                 sentence_vec1.append(word_vec1)
             except KeyError:
+                pass
                 #print(token + " not in model")
         
         sentence_vec2 = list()
@@ -34,6 +35,7 @@ class Word2vec():
                 word_vec2 = self.model[token]
                 sentence_vec2.append(word_vec2)
             except KeyError:
+                pass
                 #print(token + " not in model")
             
         

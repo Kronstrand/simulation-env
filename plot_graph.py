@@ -6,7 +6,7 @@ class Plot_Graph():
     def __init__(self):
         self.id_iterator = 0
         self.content = list()
-        self.executable_events = list()
+        #self.executable_events = list()
 
     def create_mutual_exclusivity(self, event1, event2):
         event1.add_mutual_exclusivity(event2)
@@ -95,12 +95,13 @@ class Plot_Graph():
 
         return executable_events
     
+    """
     def remove_executable_event(self, event):
         
         self.executable_events[-1].remove(event)
         if len(self.executable_events[-1]) == 0:
             del self.executable_events[-1]
-    """    
+        
     def set_executable_events(self, event):
         
         new_executable_events = list()
@@ -116,6 +117,14 @@ class Plot_Graph():
         if len(new_executable_events) > 0:
             self.executable_events.append(new_executable_events)
     """    
+    
+    def get_all_preceeding_events(self, event, preceeding_events):
+        for preceeding_event in event.before:
+            if preceeding_event not in preceeding_events:
+                preceeding_events.append(preceeding_event)
+                self.get_all_preceeding_events(preceeding_event, preceeding_events)
+        return preceeding_events
+    
     def new_updated_plot_graph(self, event):
 
         cloned_plot_Graph = copy.deepcopy(self)
@@ -131,9 +140,11 @@ class Plot_Graph():
         
         excluded_events = list()
         for mutual_exclusive_event in event.mutual_exclusive_with:
-            excluded_events = excluded_events + self.remove_mutual_exclution_with_propagation(mutual_exclusive_event, list())
+            excluded_events = excluded_events + self.get_mutual_exclution_with_propagation(mutual_exclusive_event, list())
             
-        expired_events = [event] + event.before
+        
+        expired_events = self.get_all_preceeding_events(event, list()) + [event]
+        #expired_events = [event] + event.before
         self.connect_predecessors_to_successors(excluded_events)
         self.remove_events(excluded_events + expired_events)
 
@@ -156,7 +167,7 @@ class Plot_Graph():
         return self
 
     
-    def remove_mutual_exclution_with_propagation(self, event, excluded_events):
+    def get_mutual_exclution_with_propagation(self, event, excluded_events):
 
         excluded_events.append(event)
         
@@ -166,7 +177,7 @@ class Plot_Graph():
                 if preceeding_event in excluded_events:
                     n_excluded = n_excluded + 1
             if len(proceeding_event.before) - n_excluded == 0:
-                self.remove_mutual_exclution_with_propagation(proceeding_event, excluded_events)
+                self.get_mutual_exclution_with_propagation(proceeding_event, excluded_events)
                 
         return excluded_events
 
@@ -230,6 +241,7 @@ class Plot_Graph():
         
 
 class Event():
+    
     def __init__(self, id, label):
         #self.events
         self.id = id
@@ -239,13 +251,16 @@ class Event():
         self.after = list() # these events are positioned after the event
         self.mutual_exclusive_with = list()
         self.type = "normal" #normal, optinoal
+    
     def add_mutual_exclusivity(self, event):
         self.mutual_exclusive_with.append(event)
+    
     def is_before(self, event):
         #if the constraint is not already created
         if event not in self.after:
             self.after.append(event)
             event.before.append(self)
+    
     def set_type(self, event_type):
         if event_type == "normal" or event_type == "optional":
             self.type = event_type      

@@ -45,6 +45,10 @@ class Word2vec():
         # return cosine similarity between sentence vectors
         similarity = cosine_similarity([summed_sentence1],[summed_sentence2])
         #print(sentence1 + " and " + sentence2 + ": " + str(similarity))
+        #print("change + receipt:")
+        #print(cosine_similarity([self.model["change"]],[self.model["receipt"]]))
+        #print("change + change:")
+        #print(cosine_similarity([self.model["change"]],[self.model["change"]]))
         return similarity
         
 

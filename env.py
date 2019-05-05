@@ -14,24 +14,24 @@ action_labels = [[0, "move left"],
                    [4, "go into pharmacy"],
                    [5, "go into bank"], #not implemented
                    [6, "go into docter's office"], #not implemented
-                   [7, "look for drugs"],
-                   [8, "pick up drug"],
-                   [9, "stand in line"],
-                   [10, "wait"],
-                   [11, "order drugs"],
-                   [12, "ask for request"],
-                   [13, "ask for prescription"],
-                   [14, "produce prescription"],
-                   [15, "don't produce prescription"],
-                   [16, "refuse to sell"],
-                   [17, "pay cash"], #not implemented
-                   [18, "hand over drugs"], 
-                   [19, "hand over receipt"], 
-                   [20, "take drugs"], 
-                   [21, "take receipt"],
-                   [22, "accept prescription"],
-                   [23, "leave pharmacy"],
-                   [24, "skip line"]
+                   [7, "Customer look for drugs"],
+                   [8, "Customer pick up drug"],
+                   [9, "Customer stand in line"],
+                   [10, "Customer wait"],
+                   [11, "Customer order drugs"],
+                   [12, "Pharmacist ask for request"],
+                   [13, "Pharmacist ask for prescription"],
+                   [14, "Customer produce prescription"],
+                   [15, "Customer don't produce prescription"],
+                   [16, "Pharmacist refuse to sell"],
+                   [17, "Customer pay cash"], #not implemented
+                   [18, "Pharmacist hand over drugs"], 
+                   [19, "Pharmacist hand over receipt"], 
+                   [20, "Customer take drugs"], 
+                   [21, "Customer take receipt"],
+                   [22, "Pharmacist check prescription"],
+                   [23, "Customer leave pharmacy"],
+                   [24, "Customer skip line"]
                   ] 
 
 class Prop:
@@ -75,17 +75,35 @@ class Agent(Prop):
       e.output_text.add_line("Error: non available action")
 
   def reward_protagonist(self, action):
-    
+    if protagonist.rewards.get(action) != None:
+        protagonist.reward = protagonist.reward + protagonist.rewards[action]
+    """
+    #using hardcoded rewards
     if protagonist.trajectory_tree == None:
       if protagonist.rewards.get(action) != None:
         protagonist.reward = protagonist.reward + protagonist.rewards[action]
+    # using trajectory tree
+    elif len(protagonist.current_tree_event.children) > 0:
+      for event in protagonist.current_tree_event.children:
+        if event.action_correspondence != action:
+          protagonist.reward = protagonist.reward - 10
+          break
+        else:
+          protagonist.current_tree_event = event
+          #print(str(action))
+    """
+    """
     elif len(protagonist.current_tree_event.children) > 0:
       for event in protagonist.current_tree_event.children:
         if event.action_correspondence == action:
           protagonist.reward = protagonist.reward + 10
           protagonist.current_tree_event = event
+          print(str(action))
           break
-          
+    """ 
+    
+    
+         
   
   def take_action(self, action):
     
@@ -143,7 +161,7 @@ class Agent(Prop):
     #stand in line
     elif action == 9:
       self.print_action(action)
-      self.state ="stand in line"
+      self.state ="Customer stand in line"
 
     #wait
     elif action == 10:
@@ -267,7 +285,6 @@ class Protagonist(Agent):
     self.curiosity =  self.initial_curiosity #epsilon
     self.trajectory_tree = None
     self.current_tree_event = None
-    #self.learning_rate = 0.1 #alpha
    
   
   def set_rewards(self, reward_structure):
@@ -343,10 +360,10 @@ class Protagonist(Agent):
 
     self.add_value_to_Q_table(state, action, rl.Q_learning_TD(Q_value, new_optimal_Q_value, self.reward))
 
-    self.reward = 0;
+    self.reward = 0
   
   def generate_state_key(self):
-    return str(world.location.name) + str(self.x) + str(self.y) + str(self.state) + str(self.has_item("drugs")) + str(pharmacist.state)
+    return str(world.location.name) + str(self.x) + str(self.y) + str(self.state) + str(self.has_item("drugs")) + str(pharmacist.state)# + str(self.current_tree_event)
 
   
   def choose_action(self):
@@ -375,7 +392,7 @@ class Protagonist(Agent):
         if self.y < 2 and self.has_item("drugs") == False:
           possible_actions.append(7)
         #stand in line
-        if customer1.x == self.x and customer1.y == self.y - 1 and customer1.state == "wait":
+        if customer1.x == self.x and customer1.y == self.y - 1 and customer1.state == "Customer wait":
           possible_actions.append(9) #wait in line
           possible_actions.append(24) #skip line
 
@@ -385,16 +402,16 @@ class Protagonist(Agent):
           possible_actions.append(8)
 
       #wait
-      elif self.state == "stand in line":
+      elif self.state == "Customer stand in line":
         possible_actions.append(10)
     
     
       if self.x == pharmacist.x and self.y == pharmacist.y + 2:
       #order drugs
-        if pharmacist.state == "ask for request":
+        if pharmacist.state == "Pharmacist ask for request":
           possible_actions.append(11)
 
-        elif pharmacist.state == "ask for prescription":
+        elif pharmacist.state == "Pharmacist ask for prescription":
           #hand over prescription
           if self.has_item("prescription"):
             possible_actions.append(14)
@@ -423,11 +440,11 @@ class Pharmacist(Agent):
       self.take_action(12)
 
     #response to customer order drugs
-    elif self.state == "ask for request" and protagonist.state == "order drugs":
+    elif self.state == "Pharmacist ask for request" and protagonist.state == "Customer order drugs":
       self.take_action(13)
 
     #don't produce prescription
-    elif protagonist.state == "don't produce prescription":
+    elif protagonist.state == "Customer don't produce prescription":
       self.take_action(16)
     
     #costumer produces prescription
@@ -553,12 +570,13 @@ def init(Q_table, tree):
   protagonist = Protagonist("Joe", [4,4], colored('@', 'blue'), Q_table)
   protagonist.items.append(Item("prescription"))
   protagonist.trajectory_tree = tree
-  protagonist.current_tree_event = tree.tree[0]
+  if tree != None:
+    protagonist.current_tree_event = tree.tree[0]
   location.agents.append(protagonist)
 
   pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
   customer1 = Customer("Customer one", [4,3], colored('@', 'yellow'))
-  customer1.state = "wait"
+  customer1.state = "Customer wait"
   # pharmacy
   pharmacy.agents.append(pharmacist)
   pharmacy.agents.append(customer1)

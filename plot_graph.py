@@ -224,10 +224,12 @@ class Plot_Graph():
 
         excluded_events = list()
         for event in self.content:
+            max_similar_val = 0
             for label in labels:
                 label_text = label[1]
                 similarity = word2vec.compare_sentences(event.label, label_text)
-                if similarity > threshold:
+                if similarity > threshold and similarity > max_similar_val:
+                    max_similar_val = similarity
                     event.action_corr = label[0] #int
             # if no corrosponding action was founds
             if event.action_corr == None :

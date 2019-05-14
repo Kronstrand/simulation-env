@@ -2,12 +2,15 @@ import engine as e
 import numpy as np
 import time
 from termcolor import colored
+import colorama
 import sys 
 import random as rnd
 import rl
 import trajectory_tree as tt
 
-action_labels = [[0, "move left"], 
+colorama.init()
+
+action_labels = [[0, "move left"],
                    [1, "move right"],
                    [2, "move up"],
                    [3, "move down"],
@@ -75,7 +78,9 @@ class Agent(Prop):
       e.output_text.add_line("Error: non available action")
 
   def reward_protagonist(self, action):
+    """
     if protagonist.rewards.get(action) != None:
+        #print("reward!")
         protagonist.reward = protagonist.reward + protagonist.rewards[action]
     """
     #using hardcoded rewards
@@ -84,14 +89,17 @@ class Agent(Prop):
         protagonist.reward = protagonist.reward + protagonist.rewards[action]
     # using trajectory tree
     elif len(protagonist.current_tree_event.children) > 0:
+      action_found = False
       for event in protagonist.current_tree_event.children:
-        if event.action_correspondence != action:
-          protagonist.reward = protagonist.reward - 10
-          break
-        else:
+        if event.action_correspondence == action:
+          action_found = True
           protagonist.current_tree_event = event
-          #print(str(action))
-    """
+          break
+      if action_found == True:
+        protagonist.reward = protagonist.reward + 10
+      else:
+        protagonist.reward = protagonist.reward - 10
+
     """
     elif len(protagonist.current_tree_event.children) > 0:
       for event in protagonist.current_tree_event.children:
@@ -363,7 +371,7 @@ class Protagonist(Agent):
     self.reward = 0
   
   def generate_state_key(self):
-    return str(world.location.name) + str(self.x) + str(self.y) + str(self.state) + str(self.has_item("drugs")) + str(pharmacist.state)# + str(self.current_tree_event)
+    return str(world.location.name) + str(self.x) + str(self.y) + str(self.state) + str(self.has_item("drugs")) + str(pharmacist.state) + str(self.current_tree_event)
 
   
   def choose_action(self):
@@ -567,8 +575,9 @@ def init(Q_table, tree):
   #location = city
   location = pharmacy
 
-  protagonist = Protagonist("Joe", [4,4], colored('@', 'blue'), Q_table)
+  protagonist = Protagonist("Joe", [3,5], colored('@', 'blue'), Q_table)
   protagonist.items.append(Item("prescription"))
+  protagonist.set_rewards("get drugs")
   protagonist.trajectory_tree = tree
   if tree != None:
     protagonist.current_tree_event = tree.tree[0]
@@ -582,7 +591,7 @@ def init(Q_table, tree):
   pharmacy.agents.append(customer1)
   #add counter
   for i in [0, 3, 4, 5, 6]:
-    newProp = Prop("counter", [i, 2], "✖")
+    newProp = Prop("counter", [i, 2], "X")
     pharmacy.inventory.append(newProp)
   #add exit
   pharmacy.exits.append(Exit("city", [3,6], colored('E', 'white'), city))

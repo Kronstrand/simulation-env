@@ -5,7 +5,7 @@ import trajectory_tree as tt
 saved_Q_table = dict()
 plot_graph = pharmacy.plot_graph
 train = True
-"""
+
 # trim plotgraph to fit labels
 plot_graph.trim_to_fit_labels(env.action_labels, 0.8)
 pharm_tree = tt.Tree()
@@ -15,8 +15,8 @@ pharm_tree.to_string()
 
 for i in range(1,len(pharm_tree.tree)):
     print(pharm_tree.tree[i].label + " = " + env.action_labels[pharm_tree.tree[i].action_correspondence][1])
-"""
-pharm_tree = None
+
+#pharm_tree = None
 
 if train:
     #train the model

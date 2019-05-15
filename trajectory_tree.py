@@ -88,11 +88,11 @@ class Tree_Node:
             print(indent, end = '')
 
             if last:
-                print("└╴", end = '')
+                print("+-", end = '')
                 indent += "  "
             else:
-                print("├╴", end = '') 
-                indent = indent + "│ "
+                print("+-", end = '') 
+                indent = indent + "| "
             print(self.label)
 
             children = self.children

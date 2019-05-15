@@ -1,5 +1,4 @@
 import nlp
-
 import copy # for copying objects
 
 class Plot_Graph():

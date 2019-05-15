@@ -96,7 +96,7 @@ class Agent(Prop):
           protagonist.current_tree_event = event
           break
       if action_found == True:
-        protagonist.reward = protagonist.reward + 10
+        protagonist.reward = protagonist.reward + 500
       else:
         protagonist.reward = protagonist.reward - 10
 
@@ -184,6 +184,7 @@ class Agent(Prop):
     elif action == 16:
       self.print_action(action)
       protagonist.state = "default"
+      protagonist.refused_sell = True
       self.state = "default"
 
     #hand over drugs
@@ -295,6 +296,7 @@ class Protagonist(Agent):
     self.trajectory_tree = None
     self.current_tree_event = None
     self.stole = False
+    self.refused_sell = False
    
   
   def set_rewards(self, reward_structure):
@@ -641,13 +643,15 @@ def run(Q_table, tree, render, learn, playable):
     if learn == True:
       protagonist.learn(state, choice)
 
-  result = 0
+  result = 0 
   if protagonist.has_item("drugs"):
     if protagonist.stole == True:
-      result = 1
+      result = 1 # agent stole drugs
     else:
-      result = 2
-
+      result = 2 # agent baught drugs
+  elif protagonist.refused_sell == True:
+      result = 3 # no drugs becauase agent was refused by pharmacist
+      
   return [result, protagonist.Q_table]
 
 

@@ -165,6 +165,7 @@ class Agent(Prop):
       self.print_action(action)
       self.items.append(Item("drugs"))
       self.state = "default"
+      self.stole = True
 
     #stand in line
     elif action == 9:
@@ -293,6 +294,7 @@ class Protagonist(Agent):
     self.curiosity =  self.initial_curiosity #epsilon
     self.trajectory_tree = None
     self.current_tree_event = None
+    self.stole = False
    
   
   def set_rewards(self, reward_structure):
@@ -638,8 +640,15 @@ def run(Q_table, tree, render, learn, playable):
 
     if learn == True:
       protagonist.learn(state, choice)
-  
-  return protagonist.Q_table
+
+  result = 0
+  if protagonist.has_item("drugs"):
+    if protagonist.stole == True:
+      result = 1
+    else:
+      result = 2
+
+  return [result, protagonist.Q_table]
 
 
 

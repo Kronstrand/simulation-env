@@ -85,7 +85,7 @@ class Agent(Prop):
     """
     #using hardcoded rewards
     if protagonist.trajectory_tree == None:
-      if protagonist.rewards.get(action) != None:
+      if protagonist.rewards.get(action) != None and protagonist.has_item("drugs") == False:
         protagonist.reward = protagonist.reward + protagonist.rewards[action]
     # using trajectory tree
     elif len(protagonist.current_tree_event.children) > 0:
@@ -221,6 +221,7 @@ class Agent(Prop):
       self.state = "at counter"
       self.y = self.y - 1
       pharmacist.state = "new customer"
+      self.line_skipped = True
 
 
     #simple action changing state of agent
@@ -297,6 +298,7 @@ class Protagonist(Agent):
     self.current_tree_event = None
     self.stole = False
     self.refused_sell = False
+    self.line_skipped = False
    
   
   def set_rewards(self, reward_structure):
@@ -607,7 +609,7 @@ def run(Q_table, tree, render, learn, playable):
   init(Q_table, tree)
 
   #simulaton loop
-  for i in range(100):
+  for i in range(20):
 
     actions = protagonist.get_possible_actions()
     str_actions = list()
@@ -656,7 +658,7 @@ def run(Q_table, tree, render, learn, playable):
   elif protagonist.refused_sell == True:
       result = 3 # no drugs becauase agent was refused by pharmacist
       
-  return [result, protagonist.Q_table]
+  return [result, protagonist.line_skipped, protagonist.Q_table]
 
 
 

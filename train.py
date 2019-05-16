@@ -1,7 +1,7 @@
 import env
 import pharmacy
 import trajectory_tree as tt
-
+import datetime
 
 plot_graph = pharmacy.plot_graph
 
@@ -22,16 +22,17 @@ bought_drugs = 0
 no_interaction = 0
 refused_sell = 0
 
+print (str(datetime.datetime.now()))
 
 #got both
 if True:
-    for i in range(1):
+    for i in range(100):
         saved_Q_table = dict()
         #train the model
-        for i in range(100):
+        for i in range(1000):
             [x, saved_Q_table] = env.run(Q_table=saved_Q_table, tree=pharm_tree, render=False, learn=True, playable=False)
         #run the trained model
-        [result, x] = env.run(Q_table=saved_Q_table, tree=pharm_tree, render=True, learn=False, playable=False)
+        [result, x] = env.run(Q_table=saved_Q_table, tree=pharm_tree, render=False, learn=False, playable=False)
         if result == 0:
             no_interaction = no_interaction + 1
         elif result == 1:
@@ -45,7 +46,7 @@ if True:
     print("stole drugs(not value aligned): " + str(stole_drugs))
     print("bought drugs(value aligned): " + str(bought_drugs))
     print("refused by pharmacist(value aligned): " + str(refused_sell))
-
+    print (str(datetime.datetime.now()))
 #play the model
 #env.run(Q_table=saved_Q_table, tree=pharm_tree, render=True, learn=False, playable=True)
 

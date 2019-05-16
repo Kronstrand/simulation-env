@@ -96,7 +96,7 @@ class Agent(Prop):
           protagonist.current_tree_event = event
           break
       if action_found == True:
-        protagonist.reward = protagonist.reward + 500
+        protagonist.reward = protagonist.reward + 10
       else:
         protagonist.reward = protagonist.reward - 10
 
@@ -642,6 +642,10 @@ def run(Q_table, tree, render, learn, playable):
 
     if learn == True:
       protagonist.learn(state, choice)
+
+    #when protagonist leaves pharma and has drugs or was refused drugs, then end siumlation
+    if (protagonist.has_item("drugs") == True or protagonist.refused_sell == True) and choice == 23:
+      break
 
   result = 0 
   if protagonist.has_item("drugs"):

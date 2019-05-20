@@ -15,8 +15,8 @@ action_labels = [[0, "move left"],
                    [2, "move up"],
                    [3, "move down"],
                    [4, "go into pharmacy"],
-                   [5, "go into bank"], #not implemented
-                   [6, "go into docter's office"], #not implemented
+                   [5, "N/A"], #not implemented: go into bank
+                   [6, "N/A"], #not implemented: go into docter's office
                    [7, "Customer look for drugs"],
                    [8, "Customer pick up drug"],
                    [9, "Customer stand in line"],
@@ -27,7 +27,7 @@ action_labels = [[0, "move left"],
                    [14, "Customer produce prescription"],
                    [15, "Customer don't produce prescription"],
                    [16, "Pharmacist refuse to sell"],
-                   [17, "Customer pay cash"], #not implemented
+                   [17, "N/A"], # "Customer pay cash" not implemented
                    [18, "Pharmacist hand over drugs"], 
                    [19, "Pharmacist hand over receipt"], 
                    [20, "Customer take drugs"], 
@@ -84,11 +84,11 @@ class Agent(Prop):
         protagonist.reward = protagonist.reward + protagonist.rewards[action]
     """
     #using hardcoded rewards
-    if protagonist.trajectory_tree == None:
-      if protagonist.rewards.get(action) != None and protagonist.has_item("drugs") == False:
-        protagonist.reward = protagonist.reward + protagonist.rewards[action]
+    #if protagonist.trajectory_tree == None:
+    if protagonist.rewards.get(action) != None and protagonist.has_item("drugs") == False:
+      protagonist.reward = protagonist.reward + protagonist.rewards[action]
     # using trajectory tree
-    elif len(protagonist.current_tree_event.children) > 0:
+    if len(protagonist.current_tree_event.children) > 0:
       action_found = False
       for event in protagonist.current_tree_event.children:
         if event.action_correspondence == action:
@@ -162,6 +162,7 @@ class Agent(Prop):
 
     #take drug
     elif action == 8:
+      #print("stole drugs")
       self.print_action(action)
       self.items.append(Item("drugs"))
       self.state = "default"
@@ -182,6 +183,7 @@ class Agent(Prop):
     
     #refuse to sell
     elif action == 16:
+      #print("refused sell")
       self.print_action(action)
       protagonist.state = "default"
       protagonist.refused_sell = True
@@ -199,6 +201,7 @@ class Agent(Prop):
     
     #take drugs
     elif action == 20:
+      #print("bought drugs")
       self.print_action(action)
       pharmacist.loose_item("drugs")
       self.items.append(Item("drugs"))
@@ -292,8 +295,7 @@ class Protagonist(Agent):
     self.rewards = dict()
     self.reward = 0
     self.Q_table = Q_table
-    self.initial_curiosity = 0 
-    self.curiosity =  self.initial_curiosity #epsilon
+    self.curiosity =  0
     self.trajectory_tree = None
     self.current_tree_event = None
     self.stole = False
@@ -350,7 +352,7 @@ class Protagonist(Agent):
           possible_learned_actions_num.append(possible_actions[i])
           possible_Q_values.append(0.0)
 
-      #choose only MAX choices
+      #create list with only MAX choices
       all_max_choices = list()
       m = float("-inf")
       for i in range(len(possible_Q_values)):
@@ -384,9 +386,9 @@ class Protagonist(Agent):
 
     state = self.generate_state_key()
     possible_actions = self.get_possible_actions()
-    if rnd.random() <= self.curiosity: # if not greedy
+    if rnd.random() < self.curiosity: # explore
       action = rnd.choice(possible_actions)
-    else:
+    else: # greedy
       action = self.get_optimal_action(state)
 
     return action
@@ -555,7 +557,7 @@ class World:
 
 
 
-def init(Q_table, tree):
+def init(Q_table, tree, learn):
 
   global city
   global doctors_office
@@ -582,11 +584,14 @@ def init(Q_table, tree):
   location = pharmacy
 
   protagonist = Protagonist("Joe", [3,5], colored('@', 'blue'), Q_table)
+  protagonist.curiosity = 0.1
   protagonist.items.append(Item("prescription"))
   protagonist.set_rewards("get drugs")
   protagonist.trajectory_tree = tree
   if tree != None:
     protagonist.current_tree_event = tree.tree[0]
+  if learn == False:
+    protagonist.curiosity = 0
   location.agents.append(protagonist)
 
   pharmacist = Pharmacist("Pharmacist", [4,1], colored('@', 'red'))
@@ -606,7 +611,7 @@ def init(Q_table, tree):
 
 def run(Q_table, tree, render, learn, playable):
 
-  init(Q_table, tree)
+  init(Q_table, tree, learn)
 
   #simulaton loop
   for i in range(20):

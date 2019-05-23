@@ -149,7 +149,7 @@ class Plot_Graph():
 
         return self
 
-
+    """
     def update_plot_graph2(self, event):
         
         #remove mutual exclusive events because its mutual exclusive counterpart was used
@@ -165,7 +165,7 @@ class Plot_Graph():
         
         return self
 
-    
+    """
     def get_mutual_exclution_with_propagation(self, event, excluded_events):
 
         excluded_events.append(event)
@@ -179,7 +179,7 @@ class Plot_Graph():
                 self.get_mutual_exclution_with_propagation(proceeding_event, excluded_events)
                 
         return excluded_events
-
+    """
     def remove_mutual_exclution_with_propagation2(self, event):
 
         def recursivly_remove_mutual_exclution_events(event, proceeding_events_of_deleted_events):
@@ -216,27 +216,33 @@ class Plot_Graph():
         for before_deleted_event in event.before:
             for after_deleted_event in proceeding_events_of_deleted_events:
                 before_deleted_event.is_before(after_deleted_event)
-
+    """
     def trim_to_fit_labels(self, labels, threshold):
         
         word2vec = nlp.Word2vec()
 
-        excluded_events = list()
+        no_corr = list()
         for event in self.content:
             max_similar_val = 0
             for label in labels:
                 label_text = label[1]
                 similarity = word2vec.compare_sentences(event.label, label_text)
-                if similarity > threshold and similarity > max_similar_val:
+                if similarity > max_similar_val:
                     max_similar_val = similarity
-                    event.action_corr = label[0] #int
+                    if similarity > threshold: 
+                        event.action_corr = label[0] #int
             # if no corrosponding action was founds
             if event.action_corr == None :
-                print(event.label + " was removed with " + str(similarity))   
-                excluded_events.append(event)
+                print(event.label + " was removed with no similarity beyond " + str(max_similar_val))   
+                no_corr.append(event)
 
-        self.connect_predecessors_to_successors(excluded_events)
-        self.remove_events(excluded_events)
+        excluded_events = list()
+        for e in no_corr:
+            if len(e.mutual_exclusive_with) > 0: 
+                excluded_events = excluded_events + self.get_mutual_exclution_with_propagation(e, list())
+        
+        self.connect_predecessors_to_successors(no_corr + excluded_events)
+        self.remove_events(no_corr + excluded_events)
 
         return self
         

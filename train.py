@@ -7,7 +7,7 @@ saved_Q_table = dict()
 plot_graph = pharmacy.plot_graph
 
 # trim plotgraph to fit labels
-plot_graph.trim_to_fit_labels(env.action_labels, 0.6)
+plot_graph.trim_to_fit_labels(env.action_labels, 0.8)
 pharm_tree = tt.Tree()
 #generate trajectory tree
 pharm_tree.generate_tree_from_plot_graph(plot_graph, plot_graph.get_event("Stand in line"))
